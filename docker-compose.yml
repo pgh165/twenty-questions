@@ -1,0 +1,46 @@
+services:
+  web:
+    build: .
+    container_name: akinator-web
+    ports:
+      # 호스트 8000은 capstone-web이 선점 → 8001로 매핑 (컨테이너 내부는 8000)
+      - "8001:8000"
+    volumes:
+      # 코드 핫리로드용 bind mount
+      - .:/app
+      # SQLite DB 영속화 (bind mount 위에 named volume 오버레이)
+      - sqlite_data:/app/data
+    env_file:
+      - .env
+    depends_on:
+      - ollama
+    networks:
+      - akinator-net
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: akinator-ollama
+    # 호스트 기존 Ollama(11434)와 충돌 방지: 11435로 매핑
+    ports:
+      - "11435:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - akinator-net
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
+  sqlite_data:
+
+networks:
+  akinator-net:
+    driver: bridge

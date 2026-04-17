@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Akinator Bot</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif;
+      max-width: 640px;
+      margin: 2rem auto;
+      padding: 1rem;
+      line-height: 1.5;
+    }
+    h1 { margin-top: 0; }
+    #turn-indicator { color: #888; font-size: 0.9rem; }
+    #question, #guess {
+      font-size: 1.25rem;
+      margin: 1.5rem 0;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      min-height: 3rem;
+    }
+    #guess { border-color: #4caf50; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    button {
+      padding: 0.6rem 1.1rem;
+      font-size: 1rem;
+      border: 1px solid #888;
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.primary { background: #1976d2; color: #fff; border-color: #1976d2; }
+    #history {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    #history li { margin-bottom: 0.3rem; }
+    #error { color: #c62828; margin-top: 1rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Akinator Bot</h1>
+
+  <section id="setup">
+    <label>
+      카테고리:
+      <select id="category">
+        <option value="인물">인물</option>
+        <option value="동물">동물</option>
+        <option value="사물">사물</option>
+        <option value="브랜드">브랜드</option>
+      </select>
+    </label>
+    <button id="start-btn" class="primary">시작</button>
+  </section>
+
+  <section id="game" hidden>
+    <div id="turn-indicator"></div>
+    <div id="question"></div>
+    <div class="row" id="answer-row">
+      <button data-ans="예">예</button>
+      <button data-ans="아니오">아니오</button>
+      <button data-ans="잘 모름">잘 모름</button>
+    </div>
+    <div id="guess" hidden></div>
+    <div class="row" id="end-row" hidden>
+      <button id="restart-btn" class="primary">새 게임</button>
+    </div>
+    <ol id="history"></ol>
+  </section>
+
+  <div id="error"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const state = { sessionId: null, turn: 0, busy: false };
+
+  function setError(msg) { $("error").textContent = msg || ""; }
+
+  function setBusy(b) {
+    state.busy = b;
+    for (const btn of document.querySelectorAll("button")) btn.disabled = b;
+  }
+
+  function renderQuestion(q) {
+    state.turn += 1;
+    $("turn-indicator").textContent = `턴 ${state.turn}`;
+    $("question").textContent = q;
+    $("question").hidden = false;
+    $("answer-row").hidden = false;
+    $("guess").hidden = true;
+    $("end-row").hidden = true;
+  }
+
+  function renderGuess(ans) {
+    $("question").hidden = true;
+    $("answer-row").hidden = true;
+    $("guess").textContent = `🤔 내 추측: ${ans}`;
+    $("guess").hidden = false;
+    $("end-row").hidden = false;
+  }
+
+  function appendHistory(q, a) {
+    const li = document.createElement("li");
+    li.textContent = `${q} → ${a}`;
+    $("history").appendChild(li);
+  }
+
+  async function postJSON(url, body) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+
+  async function start() {
+    if (state.busy) return;
+    setError(""); setBusy(true);
+    try {
+      const category = $("category").value;
+      const data = await postJSON("/api/start/", { category });
+      state.sessionId = data.session_id;
+      state.turn = 0;
+      $("history").innerHTML = "";
+      $("setup").hidden = true;
+      $("game").hidden = false;
+      if (data.action === "ask") renderQuestion(data.question);
+      else renderGuess(data.answer);
+    } catch (e) {
+      setError(e.message);
+    } finally { setBusy(false); }
+  }
+
+  async function answer(ans) {
+    if (state.busy || !state.sessionId) return;
+    const currentQ = $("question").textContent;
+    setError(""); setBusy(true);
+    try {
+      const data = await postJSON("/api/answer/", {
+        session_id: state.sessionId,
+        answer: ans,
+      });
+      appendHistory(currentQ, ans);
+      if (data.action === "ask") renderQuestion(data.question);
+      else renderGuess(data.answer);
+    } catch (e) {
+      setError(e.message);
+    } finally { setBusy(false); }
+  }
+
+  $("start-btn").addEventListener("click", start);
+  $("restart-btn").addEventListener("click", () => {
+    state.sessionId = null;
+    $("setup").hidden = false;
+    $("game").hidden = true;
+  });
+  for (const btn of document.querySelectorAll("#answer-row button")) {
+    btn.addEventListener("click", () => answer(btn.dataset.ans));
+  }
+})();
+</script>
+</body>
+</html>
