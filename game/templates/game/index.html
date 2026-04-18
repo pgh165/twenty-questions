@@ -3,114 +3,754 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Akinator Bot</title>
+  <title>Akinator Bot — AI가 당신의 마음을 읽습니다</title>
+  <meta name="description" content="마음속으로 생각한 대상을 AI가 예/아니오 질문으로 맞추는 아키네이터 챗봇" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    :root { color-scheme: light dark; }
+    /* ───── Design Tokens ───── */
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #111827;
+      --bg-card: rgba(17, 24, 39, 0.7);
+      --bg-glass: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(139, 92, 246, 0.3);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #8b5cf6;
+      --accent-light: #a78bfa;
+      --accent-glow: rgba(139, 92, 246, 0.15);
+      --success: #34d399;
+      --success-glow: rgba(52, 211, 153, 0.15);
+      --danger: #f87171;
+      --yes-color: #34d399;
+      --no-color: #f87171;
+      --unknown-color: #fbbf24;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.12);
+      --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ───── Reset & Base ───── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif;
-      max-width: 640px;
-      margin: 2rem auto;
-      padding: 1rem;
-      line-height: 1.5;
+      font-family: 'Inter', -apple-system, 'Noto Sans KR', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem;
+      line-height: 1.6;
+      overflow-x: hidden;
     }
-    h1 { margin-top: 0; }
-    #turn-indicator { color: #888; font-size: 0.9rem; }
-    #question, #guess {
-      font-size: 1.25rem;
-      margin: 1.5rem 0;
-      padding: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      min-height: 3rem;
+
+    /* animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 20% 20%, rgba(139, 92, 246, 0.08), transparent),
+        radial-gradient(ellipse 500px 500px at 80% 80%, rgba(59, 130, 246, 0.06), transparent),
+        radial-gradient(ellipse 400px 300px at 50% 50%, rgba(236, 72, 153, 0.04), transparent);
+      pointer-events: none;
+      z-index: 0;
+      animation: bgShift 20s ease-in-out infinite alternate;
     }
-    #guess { border-color: #4caf50; }
-    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    button {
-      padding: 0.6rem 1.1rem;
-      font-size: 1rem;
-      border: 1px solid #888;
-      border-radius: 6px;
-      background: transparent;
-      cursor: pointer;
+
+    @keyframes bgShift {
+      0% { opacity: 0.7; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.05); }
     }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    button.primary { background: #1976d2; color: #fff; border-color: #1976d2; }
-    #history {
-      margin-top: 2rem;
+
+    /* ───── Main Container ───── */
+    #app {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 520px;
+      margin-top: 3vh;
+    }
+
+    /* ───── Header ───── */
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .header-icon {
+      font-size: 3.5rem;
+      margin-bottom: 0.5rem;
+      display: block;
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--accent-light), #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      color: var(--text-secondary);
       font-size: 0.9rem;
-      color: #666;
+      margin-top: 0.35rem;
     }
-    #history li { margin-bottom: 0.3rem; }
-    #error { color: #c62828; margin-top: 1rem; white-space: pre-wrap; }
+
+    /* ───── Card ───── */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-lg), var(--shadow-glow);
+    }
+
+    /* ───── Setup Section ───── */
+    .setup-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .category-option {
+      position: relative;
+    }
+
+    .category-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .category-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 1rem 0.5rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-glass);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .category-label .cat-icon {
+      font-size: 1.6rem;
+      transition: transform 0.3s ease;
+    }
+
+    .category-label:hover {
+      border-color: rgba(139, 92, 246, 0.2);
+      background: rgba(139, 92, 246, 0.05);
+      color: var(--text-primary);
+    }
+
+    .category-label:hover .cat-icon {
+      transform: scale(1.15);
+    }
+
+    .category-option input:checked + .category-label {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+      color: var(--text-primary);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+    }
+
+    .category-option input:checked + .category-label .cat-icon {
+      transform: scale(1.15);
+    }
+
+    /* ───── Buttons ───── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .btn:hover::after { opacity: 1; }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn:disabled::after { display: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #6d28d9);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+      width: 100%;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 30px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    /* Answer Buttons */
+    .answer-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    .btn-answer {
+      padding: 0.85rem 0.5rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: var(--bg-glass);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-answer:hover:not(:disabled) {
+      transform: translateY(-2px);
+    }
+
+    .btn-answer:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-answer[data-ans="예"] {
+      border-color: rgba(52, 211, 153, 0.2);
+    }
+    .btn-answer[data-ans="예"]:hover:not(:disabled) {
+      background: rgba(52, 211, 153, 0.1);
+      border-color: var(--yes-color);
+      color: var(--yes-color);
+      box-shadow: 0 4px 20px rgba(52, 211, 153, 0.15);
+    }
+
+    .btn-answer[data-ans="아니오"] {
+      border-color: rgba(248, 113, 113, 0.2);
+    }
+    .btn-answer[data-ans="아니오"]:hover:not(:disabled) {
+      background: rgba(248, 113, 113, 0.1);
+      border-color: var(--no-color);
+      color: var(--no-color);
+      box-shadow: 0 4px 20px rgba(248, 113, 113, 0.15);
+    }
+
+    .btn-answer[data-ans="잘 모름"] {
+      border-color: rgba(251, 191, 36, 0.2);
+    }
+    .btn-answer[data-ans="잘 모름"]:hover:not(:disabled) {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: var(--unknown-color);
+      color: var(--unknown-color);
+      box-shadow: 0 4px 20px rgba(251, 191, 36, 0.15);
+    }
+
+    /* ───── Turn Indicator ───── */
+    .turn-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .turn-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-light);
+      background: var(--accent-glow);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 999px;
+    }
+
+    /* progress bar */
+    .progress-track {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      margin-left: 1rem;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      border-radius: 999px;
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    /* ───── Question Bubble ───── */
+    .question-bubble {
+      position: relative;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--text-primary);
+      animation: slideUp 0.4s ease;
+    }
+
+    .question-bubble::before {
+      content: '🤖';
+      position: absolute;
+      top: -14px;
+      left: 16px;
+      font-size: 1.2rem;
+      background: var(--bg-secondary);
+      padding: 0 6px;
+      border-radius: 50%;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ───── Guess Result ───── */
+    .guess-card {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(59, 130, 246, 0.08));
+      border: 1px solid rgba(52, 211, 153, 0.2);
+      border-radius: var(--radius-md);
+      animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .guess-icon {
+      font-size: 3rem;
+      margin-bottom: 0.75rem;
+      display: block;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .guess-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .guess-answer {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--success), #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ───── History ───── */
+    .history-section {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .history-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.2s;
+    }
+
+    .history-toggle:hover { color: var(--text-secondary); }
+    .history-toggle:disabled { opacity: 1; cursor: pointer; }
+
+    .history-toggle .chevron {
+      transition: transform 0.3s ease;
+      font-size: 0.7rem;
+    }
+
+    .history-toggle.open .chevron {
+      transform: rotate(90deg);
+    }
+
+    .history-list {
+      list-style: none;
+      margin-top: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .history-list.open {
+      max-height: 1000px;
+    }
+
+    .history-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-glass);
+      border-radius: var(--radius-sm);
+      animation: slideUp 0.3s ease;
+    }
+
+    .history-turn {
+      flex-shrink: 0;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      min-width: 28px;
+    }
+
+    .history-q { flex: 1; }
+
+    .history-a {
+      flex-shrink: 0;
+      font-weight: 600;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+    }
+
+    .history-a.yes { color: var(--yes-color); background: rgba(52, 211, 153, 0.1); }
+    .history-a.no { color: var(--no-color); background: rgba(248, 113, 113, 0.1); }
+    .history-a.unknown { color: var(--unknown-color); background: rgba(251, 191, 36, 0.1); }
+
+    /* ───── Error ───── */
+    .error-msg {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      background: rgba(248, 113, 113, 0.08);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+      color: var(--danger);
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      animation: slideUp 0.3s ease;
+    }
+
+    .error-msg:empty {
+      display: none;
+    }
+
+    /* ───── Loading Spinner ───── */
+    .loading-dots {
+      display: none;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 1.5rem 0;
+    }
+
+    .loading-dots.visible { display: flex; }
+
+    .loading-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      animation: blink 1.4s infinite both;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ───── Footer ───── */
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--accent-light);
+      text-decoration: none;
+    }
+
+    /* ───── Responsive ───── */
+    @media (max-width: 480px) {
+      body { padding: 1rem 0.75rem; }
+      .card { padding: 1.5rem; }
+      .header h1 { font-size: 1.4rem; }
+      .category-grid { gap: 0.5rem; }
+      .answer-row { gap: 0.4rem; }
+    }
   </style>
 </head>
 <body>
-  <h1>Akinator Bot</h1>
 
-  <section id="setup">
-    <label>
-      카테고리:
-      <select id="category">
-        <option value="인물">인물</option>
-        <option value="동물">동물</option>
-        <option value="사물">사물</option>
-        <option value="브랜드">브랜드</option>
-      </select>
-    </label>
-    <button id="start-btn" class="primary">시작</button>
+<div id="app">
+  <!-- Header -->
+  <header class="header">
+    <span class="header-icon">🔮</span>
+    <h1>Akinator Bot</h1>
+    <p>AI가 당신의 마음을 읽습니다</p>
+  </header>
+
+  <!-- Setup Card -->
+  <section id="setup" class="card">
+    <div class="setup-title">무엇을 떠올리셨나요?</div>
+
+    <div class="category-grid">
+      <label class="category-option">
+        <input type="radio" name="category" value="인물" checked>
+        <span class="category-label">
+          <span class="cat-icon">👤</span>
+          인물
+        </span>
+      </label>
+      <label class="category-option">
+        <input type="radio" name="category" value="동물">
+        <span class="category-label">
+          <span class="cat-icon">🐾</span>
+          동물
+        </span>
+      </label>
+      <label class="category-option">
+        <input type="radio" name="category" value="사물">
+        <span class="category-label">
+          <span class="cat-icon">📦</span>
+          사물
+        </span>
+      </label>
+      <label class="category-option">
+        <input type="radio" name="category" value="브랜드">
+        <span class="category-label">
+          <span class="cat-icon">🏷️</span>
+          브랜드
+        </span>
+      </label>
+    </div>
+
+    <button id="start-btn" class="btn btn-primary">게임 시작 →</button>
   </section>
 
-  <section id="game" hidden>
-    <div id="turn-indicator"></div>
-    <div id="question"></div>
-    <div class="row" id="answer-row">
-      <button data-ans="예">예</button>
-      <button data-ans="아니오">아니오</button>
-      <button data-ans="잘 모름">잘 모름</button>
+  <!-- Game Card -->
+  <section id="game" class="card" hidden>
+    <!-- Turn progress -->
+    <div class="turn-bar">
+      <span id="turn-badge" class="turn-badge">🎯 턴 1</span>
+      <div class="progress-track">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
     </div>
-    <div id="guess" hidden></div>
-    <div class="row" id="end-row" hidden>
-      <button id="restart-btn" class="primary">새 게임</button>
+
+    <!-- Question -->
+    <div id="question-area">
+      <div id="question" class="question-bubble"></div>
+      <div id="answer-row" class="answer-row">
+        <button class="btn-answer" data-ans="예">✓ 예</button>
+        <button class="btn-answer" data-ans="아니오">✗ 아니오</button>
+        <button class="btn-answer" data-ans="잘 모름">? 모름</button>
+      </div>
     </div>
-    <ol id="history"></ol>
+
+    <!-- Loading -->
+    <div id="loading" class="loading-dots">
+      <span></span><span></span><span></span>
+    </div>
+
+    <!-- Guess -->
+    <div id="guess-area" hidden>
+      <div class="guess-card">
+        <span class="guess-icon">✨</span>
+        <div class="guess-label">내 추측은…</div>
+        <div id="guess-text" class="guess-answer"></div>
+      </div>
+      <button id="restart-btn" class="btn btn-primary">🔄 새 게임</button>
+    </div>
+
+    <!-- History -->
+    <div id="history-section" class="history-section" hidden>
+      <button id="history-toggle" class="history-toggle">
+        <span class="chevron">▶</span>
+        <span id="history-count">질문 기록 (0)</span>
+      </button>
+      <ul id="history" class="history-list"></ul>
+    </div>
   </section>
 
-  <div id="error"></div>
+  <!-- Error -->
+  <div id="error" class="error-msg"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Powered by <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> · Local LLM
+  </div>
+</div>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { sessionId: null, turn: 0, busy: false };
+  const MAX_TURNS = 20;
+  const state = { sessionId: null, turn: 0, busy: false, historyOpen: false };
 
   function setError(msg) { $("error").textContent = msg || ""; }
 
   function setBusy(b) {
     state.busy = b;
     for (const btn of document.querySelectorAll("button")) btn.disabled = b;
+    $("loading").classList.toggle("visible", b);
+    if (b) {
+      $("question-area").style.display = "none";
+    }
+  }
+
+  function updateProgress() {
+    const pct = Math.min((state.turn / MAX_TURNS) * 100, 100);
+    $("progress-fill").style.width = pct + "%";
   }
 
   function renderQuestion(q) {
     state.turn += 1;
-    $("turn-indicator").textContent = `턴 ${state.turn}`;
+    $("turn-badge").textContent = `🎯 턴 ${state.turn}`;
+    updateProgress();
     $("question").textContent = q;
-    $("question").hidden = false;
-    $("answer-row").hidden = false;
-    $("guess").hidden = true;
-    $("end-row").hidden = true;
+    $("question-area").style.display = "";
+    $("guess-area").hidden = true;
+    $("loading").classList.remove("visible");
   }
 
   function renderGuess(ans) {
-    $("question").hidden = true;
-    $("answer-row").hidden = true;
-    $("guess").textContent = `🤔 내 추측: ${ans}`;
-    $("guess").hidden = false;
-    $("end-row").hidden = false;
+    $("question-area").style.display = "none";
+    $("guess-text").textContent = ans;
+    $("guess-area").hidden = false;
+    $("loading").classList.remove("visible");
   }
 
   function appendHistory(q, a) {
     const li = document.createElement("li");
-    li.textContent = `${q} → ${a}`;
+    li.className = "history-item";
+
+    const turnSpan = document.createElement("span");
+    turnSpan.className = "history-turn";
+    turnSpan.textContent = `Q${state.turn}`;
+
+    const qSpan = document.createElement("span");
+    qSpan.className = "history-q";
+    qSpan.textContent = q;
+
+    const aSpan = document.createElement("span");
+    aSpan.className = "history-a";
+    if (a === "예") aSpan.classList.add("yes");
+    else if (a === "아니오") aSpan.classList.add("no");
+    else aSpan.classList.add("unknown");
+    aSpan.textContent = a;
+
+    li.appendChild(turnSpan);
+    li.appendChild(qSpan);
+    li.appendChild(aSpan);
     $("history").appendChild(li);
+
+    $("history-section").hidden = false;
+    $("history-count").textContent = `질문 기록 (${state.turn})`;
+
+    // auto-open on first item
+    if (state.turn === 1 && !state.historyOpen) {
+      toggleHistory();
+    }
+  }
+
+  function toggleHistory() {
+    state.historyOpen = !state.historyOpen;
+    $("history-toggle").classList.toggle("open", state.historyOpen);
+    $("history").classList.toggle("open", state.historyOpen);
   }
 
   async function postJSON(url, body) {
@@ -128,13 +768,19 @@
     if (state.busy) return;
     setError(""); setBusy(true);
     try {
-      const category = $("category").value;
+      const checked = document.querySelector('input[name="category"]:checked');
+      const category = checked ? checked.value : "인물";
       const data = await postJSON("/api/start/", { category });
       state.sessionId = data.session_id;
       state.turn = 0;
+      state.historyOpen = false;
       $("history").innerHTML = "";
+      $("history-section").hidden = true;
+      $("history").classList.remove("open");
+      $("history-toggle").classList.remove("open");
       $("setup").hidden = true;
       $("game").hidden = false;
+      updateProgress();
       if (data.action === "ask") renderQuestion(data.question);
       else renderGuess(data.answer);
     } catch (e) {
@@ -159,13 +805,18 @@
     } finally { setBusy(false); }
   }
 
+  // Event Listeners
   $("start-btn").addEventListener("click", start);
   $("restart-btn").addEventListener("click", () => {
     state.sessionId = null;
     $("setup").hidden = false;
     $("game").hidden = true;
   });
-  for (const btn of document.querySelectorAll("#answer-row button")) {
+  $("history-toggle").addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleHistory();
+  });
+  for (const btn of document.querySelectorAll(".btn-answer")) {
     btn.addEventListener("click", () => answer(btn.dataset.ans));
   }
 })();
