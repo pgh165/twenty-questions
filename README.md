@@ -38,12 +38,12 @@
 ## 프로젝트 구조
 
 ```
-akinator-bot/
+twenty-questions/
 ├── docker-compose.yml          # web + ollama 서비스
 ├── Dockerfile
 ├── requirements.txt
 ├── manage.py
-├── akinator_project/           # Django 프로젝트 설정
+├── tq_project/                 # Django 프로젝트 설정
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py
@@ -69,8 +69,8 @@ akinator-bot/
 
 ```bash
 # 1. 클론
-git clone https://github.com/pgh165/akinator-bot.git
-cd akinator-bot
+git clone https://github.com/pgh165/twenty-questions.git
+cd twenty-questions
 
 # 2. 환경변수 설정
 cp .env.example .env

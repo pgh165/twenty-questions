@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    container_name: akinator-web
+    container_name: tq-web
     ports:
       # 호스트 8000은 capstone-web이 선점 → 8001로 매핑 (컨테이너 내부는 8000)
       - "8001:8000"
@@ -15,12 +15,12 @@ services:
     depends_on:
       - ollama
     networks:
-      - akinator-net
+      - tq-net
     restart: unless-stopped
 
   ollama:
     image: ollama/ollama:latest
-    container_name: akinator-ollama
+    container_name: tq-ollama
     # 호스트 기존 Ollama(11434)와 충돌 방지: 11435로 매핑
     ports:
       - "11435:11434"
@@ -34,7 +34,7 @@ services:
               count: all
               capabilities: [gpu]
     networks:
-      - akinator-net
+      - tq-net
     restart: unless-stopped
 
 volumes:
@@ -42,5 +42,5 @@ volumes:
   sqlite_data:
 
 networks:
-  akinator-net:
+  tq-net:
     driver: bridge
