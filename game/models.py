@@ -4,7 +4,7 @@ from django.db import models
 
 
 class GameSession(models.Model):
-    """한 판의 아키네이터 게임 세션."""
+    """한 판의 스무고개 게임 세션."""
 
     session_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     category = models.CharField(max_length=32, default="인물")
