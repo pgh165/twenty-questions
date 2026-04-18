@@ -1,6 +1,6 @@
-# 🎯 스무고개 챗봇
+# 🎯 Twenty Questions
 
-> **LLM 기반 스무고개 챗봇** — 마음속으로 생각한 대상을 AI가 예/아니오 질문으로 맞춥니다.
+> **LLM 기반 Twenty Questions 챗봇** — 마음속으로 생각한 대상을 AI가 예/아니오 질문으로 맞춥니다.
 
 [![Django](https://img.shields.io/badge/Django-5.x-092E20?style=flat-square&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Ollama](https://img.shields.io/badge/Ollama-LLM-black?style=flat-square)](https://ollama.com/)
