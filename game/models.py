@@ -12,6 +12,8 @@ class GameSession(models.Model):
     final_guess = models.CharField(max_length=200, blank=True)
     # LLM이 제시했고 아직 사용자가 답하지 않은 질문. 답이 도착하면 QA로 옮기고 비운다.
     pending_question = models.TextField(blank=True, default="")
+    # 매 턴 LLM이 추정한 남은 후보 Top-N. 질문 생성 시 변별력 판단 근거로 사용.
+    candidates = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
@@ -36,6 +38,8 @@ class QA(models.Model):
     turn = models.IntegerField()
     question = models.TextField()
     answer = models.CharField(max_length=8, choices=ANSWER_CHOICES)
+    # 질문 임베딩 (의미적 중복 탐지용). 임베딩 호출 실패 시 null.
+    question_embedding = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

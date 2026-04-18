@@ -10,6 +10,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .akinator_logic import next_turn
 from .models import GameSession, QA
+from .ollama_client import OllamaError, get_embedding
 
 log = logging.getLogger(__name__)
 
@@ -90,12 +91,20 @@ def answer(request: HttpRequest) -> JsonResponse:
         )
 
     # 이전 질문 + 방금 받은 답변을 QA로 커밋
+    # 임베딩은 트랜잭션 밖에서 계산해도 무방하지만, 원자성을 위해 실패해도 null로 저장
+    try:
+        question_embedding = get_embedding(session.pending_question)
+    except OllamaError as e:
+        log.warning("QA 임베딩 계산 실패(null로 저장): %s", e)
+        question_embedding = None
+
     with transaction.atomic():
         QA.objects.create(
             session=session,
             turn=session.qas.count() + 1,
             question=session.pending_question,
             answer=user_answer,
+            question_embedding=question_embedding,
         )
         session.pending_question = ""
         session.save(update_fields=["pending_question"])

@@ -1,4 +1,4 @@
-# Akinator Bot (Django + Ollama + Docker)
+# 스무고개 챗봇 (Django + Ollama + Docker)
 
 ## 프로젝트 목표
 사용자가 마음속으로 생각한 대상(인물/동물/사물 등)을 LLM이 예/아니오 질문으로 맞추는 아키네이터 스타일 챗봇. Django 웹 앱에서 로컬 Ollama LLM과 연동하여 대화형 추론을 수행한다.
