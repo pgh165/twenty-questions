@@ -50,7 +50,7 @@ twenty-questions/
 └── game/                       # 메인 앱
     ├── models.py               # GameSession, QA
     ├── views.py                # API 엔드포인트
-    ├── akinator_logic.py       # 프롬프트 + 턴 진행 + Best-of-N
+    ├── twenty_questions_logic.py  # 프롬프트 + 턴 진행 + Best-of-N
     ├── ollama_client.py        # Ollama API 호출
     └── templates/game/
         └── index.html          # 게임 UI
